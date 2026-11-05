@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Workspace</title>
+<style>
+:root{color-scheme:light;--bg:#f3f1ec;--panel:#fff;--ink:#1d2a2f;--mute:#6b7a80;--line:#d9d6cd;--me:#1f5c6b;--me-ink:#fff;--bot:#e8e5dc;--warn:#b3402a}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;--bg:#12191c;--panel:#1a2327;--ink:#e6ecee;--mute:#8a9ba1;--line:#2b373c;--me:#2b7f93;--me-ink:#fff;--bot:#212d32;--warn:#ff8a70}}
+:root[data-theme=dark]{color-scheme:dark;--bg:#12191c;--panel:#1a2327;--ink:#e6ecee;--mute:#8a9ba1;--line:#2b373c;--me:#2b7f93;--me-ink:#fff;--bot:#212d32;--warn:#ff8a70}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+header h1{font-size:17px;margin:0;flex:1;font-weight:700}
+button{font:inherit;color:var(--ink);background:var(--bot);border:1px solid var(--line);border-radius:8px;padding:7px 12px}
+button.primary{background:var(--me);color:var(--me-ink);border-color:var(--me)}
+#chip{border:0;border-bottom:1px solid var(--line);border-radius:0;background:var(--panel);color:var(--mute);font-size:13px;padding:5px 12px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#log{flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:12px}
+.wrap{display:flex;flex-direction:column;max-width:90%}
+.wrap.user{align-self:flex-end;align-items:flex-end}
+.wrap.assistant{align-self:flex-start;align-items:flex-start}
+.msg{padding:9px 12px;border-radius:12px;overflow-wrap:anywhere;max-width:100%}
+.msg .body{white-space:pre-wrap}
+.user .msg{background:var(--me);color:var(--me-ink);border-bottom-right-radius:3px}
+.assistant .msg{background:var(--bot);border-bottom-left-radius:3px}
+.msg.error{align-self:center;color:var(--warn);background:none;border:1px solid var(--warn);font-size:14px;white-space:pre-wrap}
+.msg.error button{padding:3px 10px;font-size:13px;margin-top:6px;display:block}
+.msg pre{background:rgba(0,0,0,.18);padding:8px;border-radius:6px;overflow-x:auto;margin:6px 0;white-space:pre}
+.msg code{font-family:ui-monospace,monospace;font-size:14px}
+.acts{display:flex;gap:2px;margin-top:2px}
+.acts button{background:none;border:0;color:var(--mute);font-size:13px;padding:3px 8px}
+.atts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.atts img{max-width:170px;max-height:170px;border-radius:8px;display:block}
+.file{background:rgba(0,0,0,.2);border-radius:6px;padding:3px 8px;font-size:13px}
+#empty{margin:auto;text-align:center;color:var(--mute);max-width:280px}
+#dock{background:var(--panel);border-top:1px solid var(--line);padding:8px 12px calc(10px + env(safe-area-inset-bottom,0px))}
+#bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px}
+#bar>button{padding:4px 10px;font-size:14px}
+.chipf{display:flex;align-items:center;gap:6px;background:var(--bot);border:1px solid var(--line);border-radius:8px;padding:2px 4px 2px 6px;font-size:13px;max-width:100%}
+.chipf img{width:28px;height:28px;object-fit:cover;border-radius:4px}
+.chipf span{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chipf button{padding:0 7px;border:0;background:none;font-size:16px}
+form{display:flex;gap:8px}
+textarea{flex:1;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;resize:none;max-height:140px}
+dialog{width:min(92vw,440px);max-height:92vh;overflow-y:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:16px}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+label{display:block;font-size:14px;color:var(--mute);margin:12px 0 4px}
+input,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+input[type=checkbox]{width:auto;margin-right:6px}
+.tools{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+.tools label{margin:0;display:flex;align-items:center}
+.tools span{font-size:13px;color:var(--mute);flex:1;text-align:right}
+.row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.list{max-height:170px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;margin-top:8px}
+.list div{padding:7px 10px;border-bottom:1px solid var(--line);font-size:14px;overflow-wrap:anywhere}
+.list div.on{background:var(--bot);font-weight:600}
+.list div.none{color:var(--mute)}
+#menuBtn{padding:7px 11px;font-size:18px;line-height:1}
+.dim{opacity:.6;font-style:italic}
+#scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:none}
+#scrim.on{display:block}
+#drawer{position:fixed;top:0;bottom:0;left:0;width:min(84vw,320px);background:var(--panel);border-right:1px solid var(--line);z-index:21;transform:translateX(-102%);transition:transform .18s;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+#drawer.on{transform:none}
+@media(prefers-reduced-motion:reduce){#drawer{transition:none}}
+#drawer .top{display:flex;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+#drawer .top button{flex:1}
+#clist{flex:1;overflow-y:auto}
+.crow{display:flex;align-items:center;border-bottom:1px solid var(--line)}
+.crow.on{background:var(--bot)}
+.crow .ct{flex:1;min-width:0;padding:11px 12px;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crow .dots{background:none;border:0;font-size:20px;padding:6px 14px;color:var(--mute);line-height:1}
+#drawer .bot{padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+#drawer .bot button{width:100%}
+#cm{position:fixed;z-index:30;background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-width:140px;overflow:hidden}
+#cm[hidden]{display:none}
+#cm button{border:0;border-radius:0;background:none;text-align:left;padding:10px 14px}
+#cm button.del{color:var(--warn)}
+.empty2{padding:14px;color:var(--mute);font-size:14px}
+.step{align-self:stretch;border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px;color:var(--mute)}
+.step summary{cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.step pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0 0;font-family:ui-monospace,monospace;color:var(--ink)}
+.srcs{margin-top:8px;padding-top:6px;border-top:1px solid var(--line);font-size:13px;display:flex;flex-direction:column;gap:2px}
+.srcs a{color:inherit;opacity:.8;overflow-wrap:anywhere}
+#bar>button.on{background:var(--me);color:var(--me-ink);border-color:var(--me)}
+.meta{font-size:12px;color:var(--mute);align-self:center;margin-left:6px}
+.actrow{align-self:flex-start;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--mute);max-width:92%}
+.actrow span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hint{font-size:13px;color:var(--mute);margin-top:8px}
+.diag{font:12px/1.4 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:170px;overflow-y:auto;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:6px}
+</style>
+</head>
+<body>
+<header>
+  <button id="menuBtn" aria-label="Chats and settings">&#9776;</button>
+  <h1>AI Workspace</h1>
+  <button id="newBtn">New chat</button>
+</header>
+<button id="chip"></button>
+
+<div id="scrim"></div>
+<aside id="drawer">
+  <div class="top"><button id="dNew" class="primary">New chat</button></div>
+  <div id="clist"></div>
+  <div class="bot"><button id="dSet">Settings</button></div>
+</aside>
+<div id="cm" hidden><button id="cmRen">Rename</button><button id="cmDel" class="del">Delete</button></div>
+
+<div id="log"></div>
+
+<div id="dock">
+  <div id="bar">
+    <button id="bPhoto" type="button">Photo</button>
+    <button id="bFile" type="button">File</button>
+    <button id="bAgent" type="button">Agent: off</button>
+  </div>
+  <form id="f">
+    <textarea id="t" rows="1" placeholder="Message"></textarea>
+    <button class="primary" id="go" type="submit">Send</button>
+  </form>
+</div>
+<input type="file" id="pickImg" accept="image/*" multiple hidden>
+<input type="file" id="pickFile" multiple hidden>
+<input type="file" id="pickGguf" hidden>
+
+<dialog id="dlg">
+  <strong>Settings</strong>
+  <label for="key">OpenRouter API key</label>
+  <input id="key" type="password" placeholder="sk-or-..." autocomplete="off">
+
+  <label for="tkey">Tavily API key (optional, enables web search in Agent mode)</label>
+  <input id="tkey" type="password" placeholder="tvly-..." autocomplete="off">
+
+  <label for="mode">Model source</label>
+  <select id="mode"><option value="api">OpenRouter (online)</option><option value="local">Local GGUF (on this phone)</option></select>
+
+  <div id="localBox" hidden>
+    <div class="tools"><button id="loadGguf" type="button">Load .gguf file</button><span id="lstat">No model loaded</span></div>
+    <label for="nctx">Context size (memory vs. conversation length)</label>
+    <select id="nctx"><option value="512">512 (lightest)</option><option value="1024" selected>1024</option><option value="2048">2048</option><option value="4096">4096 (heaviest)</option></select>
+    <label for="lfmt">Chat format</label>
+    <select id="lfmt"><option value="chatml">ChatML (Qwen, SmolLM, most small models)</option><option value="builtin">Model's built-in template</option></select>
+    <div class="tools"><button id="testEng" type="button">Test engine (tiny model)</button><span id="tstat"></span></div>
+    <details><summary class="hint">Diagnostics (send me this if loading fails)</summary><div class="diag" id="diag">(nothing yet)</div></details>
+    <div class="hint">Text only. Agent tools and image reading are not available with local models. You need internet the first time so the engine can download.</div>
+  </div>
+
+  <div id="apiBox">
+  <label for="model">Model (search the list or type an ID)</label>
+  <input id="model" placeholder="e.g. gemini, llama, free" autocomplete="off">
+  <div class="tools">
+    <label><input type="checkbox" id="free">Free only</label>
+    <span id="mstat"></span>
+    <button id="refM" type="button">Refresh</button>
+  </div>
+  <div class="list" id="mlist"></div>
+  </div>
+
+  <label for="theme">Theme</label>
+  <select id="theme"><option value="auto">Auto (follow phone)</option><option value="light">Light</option><option value="dark">Dark</option></select>
+
+  <label for="sys">System prompt (optional)</label>
+  <input id="sys" placeholder="You are a helpful assistant.">
+
+  <div class="row">
+    <button class="primary" id="saveBtn" type="button">Save</button>
+  </div>
+</dialog>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var S={key:"",model:"meta-llama/llama-3.3-70b-instruct:free",sys:"",chats:[],cur:null,models:[],freeOnly:false,theme:"auto",notes:{},agent:false,web:false,tkey:"",mode:"api",lfmt:"chatml"};
+  var ctrl=null,DB=null,pend=[],loading=0;
+  var TXT=/\.(txt|md|csv|tsv|json|js|ts|jsx|tsx|py|html|htm|css|xml|yaml|yml|log|ini|toml|java|c|cpp|h|cs|go|rs|sh|sql|php|rb|kt|swift)$/i;
+
+  // ---- storage (IndexedDB, falls back to localStorage) ----
+  function idbOpen(){return new Promise(function(res){
+    try{var r=indexedDB.open("aiw",1);
+      r.onupgradeneeded=function(){r.result.createObjectStore("kv")};
+      r.onsuccess=function(){res(r.result)};r.onerror=function(){res(null)};
+    }catch(e){res(null)}})}
+  function idbGet(k){return new Promise(function(res){
+    if(!DB)return res(null);
+    try{var q=DB.transaction("kv").objectStore("kv").get(k);
+      q.onsuccess=function(){res(q.result||null)};q.onerror=function(){res(null)};
+    }catch(e){res(null)}})}
+  function save(){
+    if(DB){try{DB.transaction("kv","readwrite").objectStore("kv").put(S,"aiw");return}catch(e){}}
+    try{localStorage.setItem("aiw",JSON.stringify(S))}catch(e){}
+  }
+
+  function chat(){for(var i=0;i<S.chats.length;i++)if(S.chats[i].id===S.cur)return S.chats[i];return null}
+  function newChat(){if(ctrl)return;var c={id:Date.now(),title:"New chat",msgs:[]};S.chats.unshift(c);S.cur=c.id;save();render()}
+  function chip(){$("chip").textContent=S.mode==="local"?"Local model: "+(W.model||"none loaded")+"  (tap to change)":"Model: "+S.model+"  (tap to change)"}
+  function theme(){var r=document.documentElement;if(S.theme==="auto")r.removeAttribute("data-theme");else r.setAttribute("data-theme",S.theme)}
+
+  function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+  function fmt(s){
+    var parts=s.split("```"),out="";
+    for(var i=0;i<parts.length;i++){
+      if(i%2){out+="<pre><code>"+esc(parts[i].replace(/^[\w-]*\n/,""))+"</code></pre>"}
+      else{out+=esc(parts[i]).replace(/`([^`\n]+)`/g,"<code>$1</code>").replace(/\*\*([^*\n]+)\*\*/g,"<b>$1</b>")}
+    }
+    return out;
+  }
+
+  function copy(text,btn){
+    function ok(){var o=btn.textContent;btn.textContent="Copied";setTimeout(function(){btn.textContent=o},1200)}
+    function fb(){
+      var a=document.createElement("textarea");a.value=text;a.style.cssText="position:fixed;opacity:0";
+      document.body.appendChild(a);a.select();
+      try{document.execCommand("copy");ok()}catch(e){}
+      a.remove();
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(ok,fb);else fb();
+  }
+
+  // ---- messages ----
+  function bubble(role,text,o){
+    o=o||{};
+    var w=document.createElement("div");w.className="wrap "+role;
+    var d=document.createElement("div");d.className="msg";
+    if(o.atts&&o.atts.length){
+      var at=document.createElement("div");at.className="atts";
+      o.atts.forEach(function(a){
+        if(a.kind==="image"){var im=document.createElement("img");im.src=a.data;at.appendChild(im)}
+        else{var f=document.createElement("span");f.className="file";f.textContent=a.name;at.appendChild(f)}
+      });
+      d.appendChild(at);
+    }
+    var b=document.createElement("div");b.className="body";
+    if(role==="assistant")b.innerHTML=fmt(text);else b.textContent=text;
+    if(text||role==="assistant")d.appendChild(b);
+    if(o.sources&&o.sources.length){
+      var sd=document.createElement("div");sd.className="srcs";
+      o.sources.forEach(function(s,i){
+        var a2=document.createElement("a");a2.href=s.url;a2.target="_blank";a2.rel="noopener";
+        a2.textContent=(i+1)+". "+(s.title||s.url);sd.appendChild(a2);
+      });
+      d.appendChild(sd);
+    }
+    w.appendChild(d);w.b=b;
+    if(o.acts){
+      var a=document.createElement("div");a.className="acts";
+      if(text){var cb=document.createElement("button");cb.textContent="Copy";cb.onclick=function(){copy(text,cb)};a.appendChild(cb)}
+      if(o.regen){var rb=document.createElement("button");rb.textContent="Regenerate";rb.onclick=regen;a.appendChild(rb)}
+      if(o.meta){var ms=document.createElement("span");ms.className="meta";ms.textContent=o.meta;a.appendChild(ms)}
+      w.appendChild(a);
+    }
+    $("log").appendChild(w);$("log").scrollTop=1e9;return w;
+  }
+
+  function errBubble(msg,canRetry){
+    var d=document.createElement("div");d.className="msg error";d.textContent=msg;
+    if(canRetry){
+      var r=document.createElement("button");r.textContent="Retry";
+      r.onclick=function(){if(ctrl)return;d.remove();run()};d.appendChild(r);
+    }
+    $("log").appendChild(d);$("log").scrollTop=1e9;
+  }
+
+  function steps(c,m){
+    m.tool_calls.forEach(function(tc){
+      var res="";
+      for(var k=0;k<c.msgs.length;k++)if(c.msgs[k].role==="tool"&&c.msgs[k].tool_call_id===tc.id){res=c.msgs[k].content;break}
+      var d=document.createElement("details");d.className="step";
+      var s=document.createElement("summary"),a=tc.function.arguments||"";
+      s.textContent="Tool: "+tc.function.name+"  "+a.slice(0,70);
+      var p=document.createElement("pre");p.textContent="Input: "+a+"\n\nResult: "+(res||"(no result)");
+      d.appendChild(s);d.appendChild(p);$("log").appendChild(d);
+      var nm=tc.function.name;
+      if(nm==="copy_to_clipboard"||nm==="share"){
+        var ar={};try{ar=JSON.parse(a)}catch(e){}
+        var tx=String(ar.text||""),row=document.createElement("div");row.className="actrow";
+        var bt=document.createElement("button");bt.textContent=nm==="share"?"Share":"Copy";
+        bt.onclick=function(){
+          if(nm==="share"&&navigator.share)navigator.share({title:String(ar.title||""),text:tx}).catch(function(){});
+          else copy(tx,bt);
+        };
+        var pv=document.createElement("span");pv.textContent=tx.slice(0,100);
+        row.appendChild(bt);row.appendChild(pv);$("log").appendChild(row);
+      }
+    });
+    $("log").scrollTop=1e9;
+  }
+
+  function render(){
+    var log=$("log");log.innerHTML="";var c=chat();
+    if(!c||!c.msgs.length){log.innerHTML='<div id="empty"><b>Ready.</b><br>Add your OpenRouter key in Settings, then send a message or attach a photo or file.</div>';return}
+    c.msgs.forEach(function(m,i){
+      if(m.role==="tool")return;
+      if(m.tool_calls){if(m.content)bubble("assistant",m.content,{});steps(c,m);return}
+      bubble(m.role,m.content,{acts:true,atts:m.atts,sources:m.sources,meta:m.meta,regen:m.role==="assistant"&&i===c.msgs.length-1});
+    });
+  }
+
+  function setBusy(b){var g=$("go");g.textContent=b?"Stop":"Send";g.type=b?"button":"submit"}
+
+  function toApi(m){
+    if(m.role==="tool")return{role:"tool",tool_call_id:m.tool_call_id,content:m.content};
+    if(m.tool_calls)return{role:"assistant",content:m.content||"",tool_calls:m.tool_calls};
+    if(!m.atts||!m.atts.length)return{role:m.role,content:m.content};
+    var mv=S.models.filter(function(x){return x.id===S.model})[0],vis=mv?mv.vision:true;
+    var txt=m.content||"",imgs=[];
+    m.atts.forEach(function(a){
+      if(a.kind==="text")txt+="\n\n[Attached file: "+a.name+"]\n"+a.text;
+      else if(a.kind==="image")imgs.push({type:"image_url",image_url:{url:a.data}});
+      else if(a.kind==="pdf"&&a.pages){
+        txt+="\n\n[Attached PDF: "+a.name+", "+a.total+" pages]\n"+(a.text||"(no extractable text)");
+        if(vis){
+          a.pages.forEach(function(u){imgs.push({type:"image_url",image_url:{url:u}})});
+          if(a.total>a.pages.length)txt+="\n(Only the first "+a.pages.length+" pages are attached as images.)";
+        }
+      }
+      else if(a.kind==="pdf")imgs.push({type:"file",file:{filename:a.name,file_data:a.data}});
+    });
+    return{role:m.role,content:[{type:"text",text:txt.trim()||"(see attachments)"}].concat(imgs)};
+  }
+
+  var MAXSTEPS=8,webSrcs=[];
+  var AGENT_SYS="You are an agent with tools. Use a tool whenever it helps: calculator for math, run_js for code or data processing, notes for remembering things between chats, get_datetime for the current date and time, fetch_url to read a public web page or API, get_location for the phone position, copy_to_clipboard or share to hand the user text through a button they tap. Call a tool, read its result, then continue or give the final answer. Do not repeat identical calls. Keep the final answer clear and concise.";
+  var TOOLS=[
+    {type:"function",function:{name:"calculator",description:"Evaluate a math expression. Supports + - * / ** % parentheses and functions like sqrt, sin, log, pow, round, abs.",parameters:{type:"object",properties:{expression:{type:"string"}},required:["expression"]}}},
+    {type:"function",function:{name:"run_js",description:"Run JavaScript in a sandbox (no DOM, no network). Use console.log to output results. 5 second limit.",parameters:{type:"object",properties:{code:{type:"string"}},required:["code"]}}},
+    {type:"function",function:{name:"notes",description:"Persistent notepad that survives between chats. action: save (needs key and value), read (needs key), list, delete (needs key).",parameters:{type:"object",properties:{action:{type:"string",enum:["save","read","list","delete"]},key:{type:"string"},value:{type:"string"}},required:["action"]}}},
+    {type:"function",function:{name:"get_datetime",description:"Get the current date, time and timezone of the user's device.",parameters:{type:"object",properties:{}}}},
+    {type:"function",function:{name:"fetch_url",description:"Fetch a public web page or API by URL (GET). Returns text, max 8000 characters. Many sites block browser requests and will fail.",parameters:{type:"object",properties:{url:{type:"string"}},required:["url"]}}},
+    {type:"function",function:{name:"get_location",description:"Get the phone's current GPS location (latitude, longitude, accuracy). The user must allow the permission.",parameters:{type:"object",properties:{}}}},
+    {type:"function",function:{name:"copy_to_clipboard",description:"Show the user a Copy button holding this text; they tap it to copy.",parameters:{type:"object",properties:{text:{type:"string"}},required:["text"]}}},
+    {type:"function",function:{name:"share",description:"Show the user a Share button that opens the phone's share menu with this text; they tap it to share.",parameters:{type:"object",properties:{text:{type:"string"},title:{type:"string"}},required:["text"]}}}
+  ];
+
+  var WEB_TOOL={type:"function",function:{name:"web_search",description:"Search the internet for current or unknown information. Returns a short summary plus top results with snippets and URLs.",parameters:{type:"object",properties:{query:{type:"string"},topic:{type:"string",enum:["general","news"]},time_range:{type:"string",enum:["day","week","month","year"]}},required:["query"]}}};
+
+  async function webSearch(a){
+    if(!S.tkey)return "Error: no Tavily key set. Ask the user to add it in Settings.";
+    var q=String(a.query||"").trim();if(!q)return "Error: query is required";
+    try{
+      var b={query:q,search_depth:"basic",max_results:5,include_answer:true};
+      if(a.topic==="news")b.topic="news";
+      if(/^(day|week|month|year)$/.test(a.time_range||""))b.time_range=a.time_range;
+      var r=await fetch("https://api.tavily.com/search",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+S.tkey},body:JSON.stringify(b)});
+      var t=await r.text();
+      if(!r.ok)return "Error: Tavily HTTP "+r.status+": "+t.slice(0,200);
+      var j=JSON.parse(t),out="";
+      if(j.answer)out+="Summary: "+j.answer+"\n\n";
+      (j.results||[]).forEach(function(x,i){
+        out+=(i+1)+". "+x.title+"\n"+x.url+"\n"+String(x.content||"").slice(0,600)+"\n\n";
+        if(/^https?:/i.test(x.url)&&!webSrcs.some(function(s){return s.url===x.url}))webSrcs.push({url:x.url,title:x.title||""});
+      });
+      return out.trim()||"No results.";
+    }catch(e){return "Error: search request failed ("+(e.message||e)+"). If this says Failed to fetch, the browser may be blocking requests to Tavily."}
+  }
+
+  function wk(){
+    var out=[];
+    var fm=function(a){try{return typeof a==="string"?a:JSON.stringify(a)}catch(e){return String(a)}};
+    console.log=function(){out.push([].slice.call(arguments).map(fm).join(" "))};
+    self.fetch=undefined;self.XMLHttpRequest=undefined;self.WebSocket=undefined;self.importScripts=undefined;
+    onmessage=function(e){
+      try{var r=(0,eval)(e.data);if(r!==undefined)out.push("=> "+fm(r));postMessage(out.join("\n")||"(no output)")}
+      catch(err){postMessage(out.join("\n")+"\nError: "+err.message)}
+    };
+  }
+  function runJs(code){return new Promise(function(res){
+    var w,t;
+    try{w=new Worker(URL.createObjectURL(new Blob(["("+wk.toString()+")()"],{type:"text/javascript"})))}
+    catch(e){return res("Error: sandbox unavailable ("+e.message+")")}
+    t=setTimeout(function(){w.terminate();res("Error: timed out after 5 seconds")},5000);
+    w.onmessage=function(e){clearTimeout(t);w.terminate();res(e.data)};
+    w.onerror=function(e){clearTimeout(t);w.terminate();res("Error: "+(e.message||"worker error"))};
+    w.postMessage(code);
+  })}
+  function calc(expr){
+    if(!/^[0-9+\-*\/%().,\s^a-zA-Z_]*$/.test(expr))return "Error: invalid characters";
+    var e=expr.replace(/Math\./g,"").replace(/\^/g,"**");
+    var ids=e.match(/[a-zA-Z_]+/g)||[];
+    for(var i=0;i<ids.length;i++)if(!Object.prototype.hasOwnProperty.call(Math,ids[i]))return "Error: unknown name "+ids[i];
+    try{return String(Function("with(Math){return ("+e+")}")())}catch(x){return "Error: "+x.message}
+  }
+  function notes(a){
+    S.notes=S.notes||{};
+    var has=function(k){return Object.prototype.hasOwnProperty.call(S.notes,k)};
+    if(a.action==="list")return Object.keys(S.notes).join(", ")||"(no notes yet)";
+    if(!a.key)return "Error: key is required";
+    if(a.action==="read")return has(a.key)?S.notes[a.key]:"(no note with that key)";
+    if(a.action==="save"){S.notes[a.key]=String(a.value==null?"":a.value);save();return "Saved note: "+a.key}
+    if(a.action==="delete"){delete S.notes[a.key];save();return "Deleted note: "+a.key}
+    return "Error: unknown action";
+  }
+  async function fetchUrl(u){
+    if(!/^https?:\/\//i.test(u))return "Error: URL must start with http:// or https://";
+    try{
+      var ac=new AbortController(),t=setTimeout(function(){ac.abort()},15000);
+      var r=await fetch(u,{signal:ac.signal});clearTimeout(t);
+      var ct=r.headers.get("content-type")||"",tx=await r.text();
+      if(/html/i.test(ct)){
+        var d=new DOMParser().parseFromString(tx,"text/html");
+        d.querySelectorAll("script,style,noscript").forEach(function(n){n.remove()});
+        tx=(d.body?d.body.textContent:tx).replace(/\s+/g," ").trim();
+      }
+      return "HTTP "+r.status+"\n"+tx.slice(0,8000)+(tx.length>8000?"\n[...truncated]":"");
+    }catch(e){return "Error: could not fetch. Many sites block requests from a browser page. "+(e.message||e)}
+  }
+  async function runTool(name,raw){
+    var a;try{a=JSON.parse(raw||"{}")}catch(e){return "Error: arguments were not valid JSON"}
+    try{
+      if(name==="calculator")return calc(String(a.expression||""));
+      if(name==="run_js")return await runJs(String(a.code||""));
+      if(name==="notes")return notes(a);
+      if(name==="get_datetime")return new Date().toString()+" ("+Intl.DateTimeFormat().resolvedOptions().timeZone+")";
+      if(name==="web_search")return await webSearch(a);
+      if(name==="get_location")return await getLoc();
+      if(name==="copy_to_clipboard")return "Showed the user a Copy button with the text. They must tap it to copy.";
+      if(name==="share")return "Showed the user a Share button. They must tap it to open the share menu.";
+      if(name==="fetch_url")return await fetchUrl(String(a.url||""));
+      return "Error: unknown tool "+name;
+    }catch(e){return "Error: "+(e.message||e)}
+  }
+
+  async function run(){
+    var c=chat();if(!c||ctrl)return;
+    ctrl=new AbortController();setBusy(true);webSrcs=[];
+    try{
+      for(var step=0;step<MAXSTEPS;step++){
+        var again=await turn(c,step);
+        if(!again)break;
+        if(step===MAXSTEPS-1)errBubble("Stopped after "+MAXSTEPS+" tool steps. Send a message to continue.");
+      }
+    }finally{ctrl=null;setBusy(false)}
+  }
+
+  var DL=[];
+  function dlog(t){
+    DL.push(new Date().toLocaleTimeString()+" "+t);if(DL.length>60)DL.shift();
+    var d=$("diag");if(d){d.textContent=DL.join("\n");d.scrollTop=1e9}
+  }
+  function envInfo(){
+    dlog("page="+location.protocol+" secure="+window.isSecureContext+" isolated="+(window.crossOriginIsolated===true)+" SAB="+typeof SharedArrayBuffer+" cores="+navigator.hardwareConcurrency+" mem="+(navigator.deviceMemory||"?")+"GB");
+    dlog("UA "+navigator.userAgent.slice(0,150));
+  }
+  function watch(st,label){
+    var t0=Date.now(),id=setInterval(function(){
+      var s=Math.round((Date.now()-t0)/1000);
+      st.textContent=label+" "+s+" s"+(s>90?" - no response. Likely out of memory or not supported here. See Diagnostics.":"");
+    },1000);
+    return function(){clearInterval(id)};
+  }
+  var W={lib:null,model:null,loadErr:""};
+  async function loadWllama(fresh){
+    if(W.lib&&!fresh)return W.lib;
+    if(W.lib){try{await W.lib.exit()}catch(e){}W.lib=null;W.model=null}
+    var base="https://cdn.jsdelivr.net/npm/@wllama/wllama@3.6.1/esm/";
+    dlog("importing engine from CDN…");
+    var mod=await import(base+"index.js"),cfg;
+    dlog("engine script loaded");
+    try{cfg=(await import(base+"wasm-from-cdn.js")).default}catch(e){dlog("wasm-from-cdn failed: "+e.message);cfg={default:base+"wasm/wllama.wasm"}}
+    dlog("wasm config: "+JSON.stringify(cfg).slice(0,220));
+    if(cfg&&cfg.default){
+      try{var hh=await fetch(cfg.default,{method:"HEAD"});dlog("wasm file check: HTTP "+hh.status+", size "+hh.headers.get("content-length"))}
+      catch(e){dlog("wasm file check failed: "+e.message)}
+    }
+    var lg=function(k){return function(){
+      var tx=[].slice.call(arguments).join(" ");
+      if(/insufficient memory|failed to load model|unable to allocate|failed to allocate/i.test(tx))W.loadErr=tx.slice(0,160);
+      dlog(k+" "+tx.slice(0,170));
+    }};
+    W.lib=new mod.Wllama(cfg,{logger:{debug:function(){},log:lg("log"),warn:lg("warn"),error:lg("ERR")}});
+    dlog("engine object created");
+    return W.lib;
+  }
+  function localText(m){
+    var t=m.content||"";
+    (m.atts||[]).forEach(function(a){
+      if(a.kind==="text")t+="\n\n[File: "+a.name+"]\n"+a.text.slice(0,3000);
+      else if(a.kind==="pdf"&&a.text)t+="\n\n[PDF: "+a.name+"]\n"+a.text.slice(0,3000);
+      else t+="\n\n[Attachment "+a.name+" left out: local models here are text-only]";
+    });
+    return t.trim();
+  }
+  async function turnLocal(c){
+    var out=bubble("assistant",""),acc="";
+    if(!W.model){out.remove();errBubble("No local model loaded. Open Settings, choose Local GGUF, and load a .gguf file.");return false}
+    out.b.innerHTML='<span class="dim">Thinking on this phone… the first reply can take a while.</span>';
+    var hist=[],budget=4500;
+    for(var i=c.msgs.length-1;i>=0;i--){
+      var m=c.msgs[i];
+      if((m.role!=="user"&&m.role!=="assistant")||m.tool_calls)continue;
+      var t=localText(m);
+      if(hist.length&&budget-t.length<0)break;
+      budget-=t.length;hist.unshift({role:m.role,content:t});
+    }
+    var msgs=(S.sys?[{role:"system",content:S.sys}]:[]).concat(hist);
+    var n=0,t1=0,t2=0,fmtMode=S.lfmt||"chatml";
+    function pick(ch){
+      var c0=ch&&ch.choices&&ch.choices[0];if(!c0)return "";
+      return (c0.delta&&c0.delta.content)||c0.text||(c0.message&&c0.message.content)||"";
+    }
+    try{
+      dlog("local chat: "+fmtMode+", "+hist.length+" messages");
+      var opts={max_tokens:512,temperature:0.7,top_p:0.9,stream:true},res;
+      if(fmtMode==="chatml"){
+        var pr="";
+        (msgs[0]&&msgs[0].role==="system"?msgs:[{role:"system",content:"You are a helpful assistant."}].concat(msgs)).forEach(function(m){
+          pr+="<|im_start|>"+m.role+"\n"+m.content+"<|im_end|>\n";
+        });
+        pr+="<|im_start|>assistant\n";
+        opts.prompt=pr;opts.stop=["<|im_end|>","<|im_start|>"];
+        res=await W.lib.createCompletion(opts);
+      }else{
+        opts.messages=msgs;
+        res=await W.lib.createChatCompletion(opts);
+      }
+      var part=function(d){
+        if(!d)return false;
+        if(!n)t1=Date.now();
+        n++;t2=Date.now();acc+=d;
+        var cut=acc.search(/<\|im_(end|start)\|>/);
+        if(cut>=0){acc=acc.slice(0,cut);out.b.innerHTML=fmt(acc);return true}
+        out.b.innerHTML=fmt(acc);$("log").scrollTop=1e9;return false;
+      };
+      if(res&&res[Symbol.asyncIterator]){
+        for await(var ch of res){if(ctrl.signal.aborted)break;if(part(pick(ch)))break}
+      }else part(pick(res));
+    }catch(e){
+      var em=String(e.message||e);dlog("LOCAL ERROR "+em);
+      var crashed=/crash/i.test(em);
+      if(crashed){W.model=null;chip()}
+      out.remove();
+      errBubble("Local model error: "+em+(crashed?"\nThe engine stopped. Reload the page and load the model again. Recent engine log:\n"+DL.slice(-6).join("\n"):""),true);
+      return false;
+    }
+    if(acc){
+      var mm={role:"assistant",content:acc};
+      if(n>2)mm.meta="local, about "+((n-1)/Math.max((t2-t1)/1000,0.1)).toFixed(1)+" tok/s";
+      c.msgs.push(mm);save();render();
+    }else{out.remove();if(!ctrl.signal.aborted)errBubble("The local model returned nothing. Try Retry or a shorter message.",true)}
+    return false;
+  }
+
+  function getLoc(){return new Promise(function(res){
+    if(!navigator.geolocation)return res("Error: location is not available in this browser");
+    navigator.geolocation.getCurrentPosition(
+      function(p){res("latitude "+p.coords.latitude+", longitude "+p.coords.longitude+", accuracy about "+Math.round(p.coords.accuracy)+" m")},
+      function(e){res("Error: "+e.message+(window.isSecureContext?"":" (this page is not a secure context, so Chrome blocks location; it must be hosted over HTTPS)"))},
+      {timeout:15000,maximumAge:60000});
+  })}
+
+  async function turn(c,step){
+    if(S.mode==="local")return await turnLocal(c);
+    var out=bubble("assistant",""),acc="",rs="",fin="",calls=[],srcs=[];
+    out.b.innerHTML='<span class="dim">'+(step?"Working…":"Waiting for the model…")+'</span>';
+    var sys=[];if(S.agent)sys.push(AGENT_SYS);if(S.agent&&S.tkey)sys.push("Use web_search for anything recent, time-sensitive, or that you are unsure about, then base your answer on the results.");if(S.sys)sys.push(S.sys);
+    var msgs=(sys.length?[{role:"system",content:sys.join("\n\n")}]:[]).concat(c.msgs.map(toApi));
+    var body={model:S.model,messages:msgs,stream:true},pl=[];
+    if(c.msgs.some(function(m){return m.atts&&m.atts.some(function(a){return a.kind==="pdf"&&a.data})}))
+      pl.push({id:"file-parser",pdf:{engine:"pdf-text"}});
+    if(pl.length)body.plugins=pl;
+    if(S.agent)body.tools=S.tkey?TOOLS.concat([WEB_TOOL]):TOOLS;
+    var failed=false,aborted=false;
+    try{
+      var r=await fetch("https://openrouter.ai/api/v1/chat/completions",{
+        method:"POST",signal:ctrl.signal,
+        headers:{"Authorization":"Bearer "+S.key,"Content-Type":"application/json"},
+        body:JSON.stringify(body)
+      });
+      if(!r.ok){var e=await r.text();throw new Error("HTTP "+r.status+": "+e.slice(0,300))}
+      var rd=r.body.getReader(),dec=new TextDecoder(),buf="";
+      while(true){
+        var x=await rd.read();if(x.done)break;
+        buf+=dec.decode(x.value,{stream:true});
+        var lines=buf.split("\n");buf=lines.pop();
+        for(var i=0;i<lines.length;i++){
+          var l=lines[i].trim();
+          if(l.indexOf("data:")!==0)continue;
+          var p=l.slice(5).trim();if(p==="[DONE]")continue;
+          var j;try{j=JSON.parse(p)}catch(e2){continue}
+          if(j.error)throw new Error(j.error.message||"API error");
+          if(j.choices&&j.choices[0]&&j.choices[0].finish_reason)fin=j.choices[0].finish_reason;
+          var de=(j.choices&&j.choices[0]&&j.choices[0].delta)||{};
+          var th=de.reasoning||"";
+          if(!th&&de.reasoning_details)de.reasoning_details.forEach(function(q){th+=q.text||""});
+          if(th&&!acc){rs+=th;out.b.innerHTML='<span class="dim">Thinking… '+esc(rs.slice(-300))+'</span>';$("log").scrollTop=1e9}
+          if(de.content){acc+=de.content;out.b.innerHTML=fmt(acc);$("log").scrollTop=1e9}
+          if(de.tool_calls)de.tool_calls.forEach(function(tc){
+            var k=tc.index||0,o=calls[k]||(calls[k]={id:"",name:"",args:""});
+            if(tc.id)o.id=tc.id;
+            if(tc.function){if(tc.function.name&&!o.name)o.name=tc.function.name;if(tc.function.arguments)o.args+=tc.function.arguments}
+          });
+          if(de.annotations)de.annotations.forEach(function(a){
+            var u=a.url_citation;
+            if(a.type==="url_citation"&&u&&/^https?:/i.test(u.url)&&!srcs.some(function(s){return s.url===u.url}))srcs.push({url:u.url,title:u.title||""});
+          });
+        }
+      }
+    }catch(err){
+      if(err.name!=="AbortError"){failed=true;out.remove();errBubble(String(err.message||err),true)}
+      else aborted=true;
+    }
+
+    var live=calls.filter(Boolean);
+    if(!failed&&!aborted&&live.length){
+      var tcs=live.map(function(o,i){return{id:o.id||("call_"+Date.now()+"_"+i),type:"function",function:{name:o.name,arguments:o.args||"{}"}}});
+      c.msgs.push({role:"assistant",content:acc,tool_calls:tcs});
+      out.b.innerHTML=acc?fmt(acc):'<span class="dim">Running tools…</span>';
+      for(var q=0;q<tcs.length;q++){
+        var res=ctrl.signal.aborted?"Cancelled by user.":await runTool(tcs[q].function.name,tcs[q].function.arguments);
+        c.msgs.push({role:"tool",tool_call_id:tcs[q].id,content:String(res).slice(0,6000)});
+      }
+      save();render();
+      return !ctrl.signal.aborted;
+    }
+    if(acc){
+      srcs=srcs.concat(webSrcs.filter(function(w){return !srcs.some(function(x){return x.url===w.url})}));
+      var mm={role:"assistant",content:acc};if(srcs.length)mm.sources=srcs;
+      c.msgs.push(mm);save();render();
+    }else if(!failed){
+      out.remove();
+      if(!aborted)errBubble("The model ended without giving an answer"+(fin?" (reason: "+fin+")":"")+(rs?". It was still thinking, so it may have run out of output space or got stuck in a loop.":".")+" Try Retry, a different model, or a simpler request.",true);
+    }
+    return false;
+  }
+
+  function send(text){
+    if(ctrl)return;
+    if(loading){errBubble("Attachments are still loading. Try again in a moment.");return}
+    if(!S.key&&S.mode!=="local"){errBubble("Add your OpenRouter API key in Settings first.");return}
+    var c=chat()||(newChat(),chat());
+    if(!c.msgs.length)$("log").innerHTML="";
+    var m={role:"user",content:text};
+    if(pend.length)m.atts=pend;
+    pend=[];renderPend();
+    c.msgs.push(m);
+    if(c.title==="New chat")c.title=(text||m.atts[0].name).slice(0,40);
+    save();bubble("user",text,{acts:true,atts:m.atts});run();
+  }
+
+  function regen(){
+    var c=chat();if(!c||ctrl)return;
+    while(c.msgs.length&&c.msgs[c.msgs.length-1].role!=="user")c.msgs.pop();
+    save();render();run();
+  }
+
+  // ---- attachments ----
+  function readImg(f){return new Promise(function(res,rej){
+    var u=URL.createObjectURL(f),im=new Image();
+    im.onload=function(){
+      var s=Math.min(1,1280/Math.max(im.width,im.height)),c=document.createElement("canvas");
+      c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);
+      var x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);
+      URL.revokeObjectURL(u);res(c.toDataURL("image/jpeg",0.85));
+    };
+    im.onerror=function(){URL.revokeObjectURL(u);rej(new Error("Cannot read image "+f.name))};
+    im.src=u;
+  })}
+  function readAs(f,mode){return new Promise(function(res,rej){
+    var r=new FileReader();r.onload=function(){res(r.result)};
+    r.onerror=function(){rej(new Error("Cannot read "+f.name))};
+    if(mode==="text")r.readAsText(f);else r.readAsDataURL(f);
+  })}
+
+  var PDFJS="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/",pdfP=null;
+  function loadPdfJs(){
+    if(pdfP)return pdfP;
+    pdfP=new Promise(function(res,rej){
+      if(window.pdfjsLib)return res(window.pdfjsLib);
+      var s=document.createElement("script");s.src=PDFJS+"pdf.min.js";
+      s.onload=async function(){
+        try{
+          var w=await(await fetch(PDFJS+"pdf.worker.min.js")).text();
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([w],{type:"text/javascript"}));
+          res(window.pdfjsLib);
+        }catch(e){rej(e)}
+      };
+      s.onerror=function(){rej(new Error("pdf.js failed to load"))};
+      document.head.appendChild(s);
+    });
+    pdfP.catch(function(){pdfP=null});
+    return pdfP;
+  }
+
+  async function readPdf(f,n){
+    try{
+      var lib=await loadPdfJs();
+      var doc=await lib.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;
+      var text="",pages=[];
+      for(var p=1;p<=doc.numPages;p++){
+        var pg=await doc.getPage(p);
+        var tc=await pg.getTextContent();
+        text+="\n--- Page "+p+" ---\n"+tc.items.map(function(i){return i.str}).join(" ");
+        if(p<=10){
+          var v0=pg.getViewport({scale:1}),sc=Math.min(2,1400/Math.max(v0.width,v0.height)),v=pg.getViewport({scale:sc});
+          var c=document.createElement("canvas");c.width=Math.round(v.width);c.height=Math.round(v.height);
+          var x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);
+          await pg.render({canvasContext:x,viewport:v}).promise;
+          pages.push(c.toDataURL("image/jpeg",0.8));
+        }
+      }
+      if(text.length>100000)text=text.slice(0,100000)+"\n[...truncated]";
+      return{kind:"pdf",name:n,text:text.trim(),pages:pages,total:doc.numPages};
+    }catch(e){
+      return{kind:"pdf",name:n,data:await readAs(f,"data")};
+    }
+  }
+
+  async function addFile(f){
+    try{
+      var n=f.name||"file";
+      if(f.type.indexOf("image/")===0){
+        pend.push({kind:"image",name:n,data:await readImg(f)});
+      }else if(f.type==="application/pdf"||/\.pdf$/i.test(n)){
+        if(f.size>10*1024*1024)throw new Error(n+" is over 10 MB.");
+        pend.push(await readPdf(f,n));
+      }else if(f.type.indexOf("text/")===0||TXT.test(n)){
+        var t=await readAs(f,"text");
+        if(t.length>100000)t=t.slice(0,100000)+"\n[...truncated]";
+        pend.push({kind:"text",name:n,text:t});
+      }else throw new Error(n+": unsupported type. Use images, PDF, or text/code files.");
+    }catch(e){errBubble(String(e.message||e))}
+  }
+
+  async function addFiles(list){
+    var arr=Array.prototype.slice.call(list);
+    loading+=arr.length;renderPend();
+    for(var i=0;i<arr.length;i++){await addFile(arr[i]);loading--;renderPend()}
+  }
+
+  function renderPend(){
+    var bar=$("bar");
+    Array.prototype.slice.call(bar.querySelectorAll(".chipf")).forEach(function(n){n.remove()});
+    pend.forEach(function(a,i){
+      var c=document.createElement("div");c.className="chipf";
+      var th=a.kind==="image"?a.data:(a.pages&&a.pages[0]);
+      if(th){var im=document.createElement("img");im.src=th;c.appendChild(im)}
+      var s=document.createElement("span");s.textContent=a.name;c.appendChild(s);
+      var x=document.createElement("button");x.type="button";x.textContent="×";
+      x.onclick=function(){pend.splice(i,1);renderPend()};c.appendChild(x);
+      bar.appendChild(c);
+    });
+    if(loading){var l=document.createElement("div");l.className="chipf";l.textContent="Loading "+loading+"…";bar.appendChild(l)}
+  }
+
+  // ---- model list ----
+  function renderModels(){
+    var q=$("model").value.trim().toLowerCase(),fo=$("free").checked,box=$("mlist");
+    if(S.models.some(function(m){return m.id.toLowerCase()===q}))q="";
+    box.innerHTML="";
+    var res=S.models.filter(function(m){return(!fo||m.free)&&(!q||m.id.toLowerCase().indexOf(q)>-1)});
+    if(!res.length){box.innerHTML='<div class="none">'+(S.models.length?"No match. Your text will be used as the model ID.":"No list yet. Tap Refresh.")+'</div>';return}
+    var cur=$("model").value.trim();
+    res.slice(0,80).forEach(function(m){
+      var d=document.createElement("div");
+      d.textContent=m.id+(m.vision?"  [image]":"")+(m.tools?"  [tools]":"")+(m.free?"  [free]":"");
+      if(m.id===cur)d.className="on";
+      d.onclick=function(){$("model").value=m.id;renderModels()};
+      box.appendChild(d);
+    });
+  }
+
+  async function fetchModels(){
+    $("mstat").textContent="Loading…";
+    try{
+      var r=await fetch("https://openrouter.ai/api/v1/models");
+      if(!r.ok)throw new Error("HTTP "+r.status);
+      var j=await r.json();
+      S.models=(j.data||[]).map(function(m){
+        var pr=m.pricing||{},mod=(m.architecture&&m.architecture.input_modalities)||[];
+        return{id:m.id,free:(pr.prompt==="0"&&pr.completion==="0")||/:free$/.test(m.id),vision:mod.indexOf("image")>-1,tools:(m.supported_parameters||[]).indexOf("tools")>-1};
+      }).sort(function(a,b){return a.id<b.id?-1:1});
+      save();$("mstat").textContent=S.models.length+" models";
+    }catch(e){$("mstat").textContent="Failed: "+(e.message||e)}
+    renderModels();
+  }
+
+  var cmId=null;
+  function drawer(on){
+    $("drawer").classList.toggle("on",on);$("scrim").classList.toggle("on",on);$("cm").hidden=true;
+    if(on)renderChats();
+  }
+  function renderChats(){
+    var box=$("clist");box.innerHTML="";
+    if(!S.chats.length){box.innerHTML='<div class="empty2">No saved chats yet.</div>';return}
+    S.chats.forEach(function(c){
+      var r=document.createElement("div");r.className="crow"+(c.id===S.cur?" on":"");
+      var t=document.createElement("div");t.className="ct";t.textContent=c.title;
+      t.onclick=function(){if(ctrl)return;S.cur=c.id;save();drawer(false);render()};
+      var b=document.createElement("button");b.className="dots";b.textContent="\u22EE";b.setAttribute("aria-label","Chat options");
+      b.onclick=function(e){
+        e.stopPropagation();
+        var m=$("cm"),q=b.getBoundingClientRect();cmId=c.id;
+        m.style.top=(q.bottom+2)+"px";m.style.left=Math.max(8,q.right-150)+"px";m.hidden=false;
+      };
+      r.appendChild(t);r.appendChild(b);box.appendChild(r);
+    });
+  }
+  function cmChat(){return S.chats.filter(function(x){return x.id===cmId})[0]}
+
+  function openSettings(){
+    $("key").value=S.key;$("tkey").value=S.tkey||"";applyMode();$("model").value=S.model;$("sys").value=S.sys;
+    $("free").checked=!!S.freeOnly;$("theme").value=S.theme;
+    renderModels();
+    $("mstat").textContent=S.models.length?S.models.length+" models":"";
+    $("dlg").showModal();
+    if(!S.models.length)fetchModels();
+  }
+
+  // ---- wiring ----
+  $("f").onsubmit=function(e){
+    e.preventDefault();
+    var t=$("t").value.trim();if(!t&&!pend.length)return;
+    $("t").value="";$("t").style.height="auto";send(t);
+  };
+  $("go").onclick=function(){if(ctrl)ctrl.abort()};
+  $("t").oninput=function(){this.style.height="auto";this.style.height=Math.min(this.scrollHeight,140)+"px"};
+  $("newBtn").onclick=newChat;
+  $("menuBtn").onclick=function(){drawer(true)};
+  $("scrim").onclick=function(){drawer(false)};
+  $("dNew").onclick=function(){newChat();drawer(false)};
+  $("dSet").onclick=function(){drawer(false);openSettings()};
+  $("chip").onclick=openSettings;
+  function tog(){
+    $("bAgent").classList.toggle("on",!!S.agent);$("bAgent").textContent="Agent: "+(S.agent?"on":"off");
+  }
+  $("bAgent").onclick=function(){S.agent=!S.agent;save();tog()};
+  $("bPhoto").onclick=function(){$("pickImg").click()};
+  $("bFile").onclick=function(){$("pickFile").click()};
+  $("pickImg").onchange=function(){addFiles(this.files);this.value=""};
+  $("pickFile").onchange=function(){addFiles(this.files);this.value=""};
+  function applyMode(){
+    $("apiBox").hidden=S.mode==="local";$("localBox").hidden=S.mode!=="local";
+    $("mode").value=S.mode;$("lfmt").value=S.lfmt||"chatml";chip();
+  }
+  $("mode").onchange=function(){S.mode=this.value;save();applyMode()};
+  $("lfmt").onchange=function(){S.lfmt=this.value;save()};
+  $("loadGguf").onclick=function(){$("pickGguf").click()};
+  $("pickGguf").onchange=async function(){
+    var f=this.files[0];this.value="";if(!f||ctrl)return;
+    var st=$("lstat"),stop=null,mb=Math.round(f.size/1048576);
+    if(f.size>2147483000){st.textContent="Failed: file is over 2 GB. Use a smaller model or a split GGUF.";return}
+    try{
+      envInfo();
+      stop=watch(st,"Starting engine…");
+      var lib=await loadWllama(true);stop();
+      var t0=Date.now(),lastP=-1;
+      dlog("loading "+f.name+" ("+mb+" MB), n_ctx="+$("nctx").value);
+      W.loadErr="";if(mb>700)dlog("warning: large model, may fail to allocate memory on this device");
+      stop=watch(st,"Loading "+f.name+" ("+mb+" MB)…");
+      await lib.loadModel([f],{n_ctx:parseInt($("nctx").value,10)||1024,n_gpu_layers:0,n_batch:128,progressCallback:function(p){
+        if(p&&p.total){var q=Math.floor(10*p.loaded/p.total);if(q!==lastP){lastP=q;dlog("progress "+q*10+"%")}}
+      }});
+      if(W.loadErr)throw new Error("Not enough memory to load this model here ("+mb+" MB). Try a smaller model, around 400 MB or less.");
+      stop();W.model=f.name;
+      st.textContent="Loaded: "+f.name+" ("+Math.round((Date.now()-t0)/1000)+" s)";
+      dlog("loaded OK");
+    }catch(e){if(stop)stop();W.model=null;st.textContent="Failed: "+(e.message||e);dlog("ERROR "+(e.message||e))}
+    chip();
+  };
+  $("testEng").onclick=async function(){
+    var st=$("tstat"),stop=null;if(ctrl)return;
+    try{
+      envInfo();
+      stop=watch(st,"Testing…");
+      await new Promise(function(res){
+        try{
+          var wu=URL.createObjectURL(new Blob(["postMessage('ok')"],{type:"text/javascript"})),pw=new Worker(wu);
+          var pt=setTimeout(function(){dlog("plain worker test: no reply (blocked?)");pw.terminate();res()},4000);
+          pw.onmessage=function(){clearTimeout(pt);dlog("plain worker test: OK");pw.terminate();res()};
+          pw.onerror=function(e){clearTimeout(pt);dlog("plain worker test: FAILED "+(e.message||"error event"));res()};
+        }catch(e){dlog("plain worker test: FAILED "+e.message);res()}
+      });
+      var lib=await loadWllama(true);
+      dlog("test: downloading tiny model file");
+      var rs=await fetch("https://huggingface.co/ggml-org/models/resolve/main/tinyllamas/stories260K.gguf");
+      if(!rs.ok)throw new Error("download HTTP "+rs.status);
+      var bl=await rs.blob();
+      dlog("test: got "+bl.size+" bytes, loading as a file");
+      await lib.loadModel([bl],{n_ctx:256,n_gpu_layers:0});
+      dlog("test: model loaded, generating");
+      var r=await lib.createCompletion({prompt:"Once upon a time",max_tokens:24});
+      stop();
+      var tx=(r.choices&&r.choices[0]&&r.choices[0].text)||"";
+      st.textContent="Engine works: "+tx.slice(0,50);dlog("test OK: "+tx.slice(0,80));
+      W.model=null;chip();
+    }catch(e){if(stop)stop();st.textContent="Test failed: "+(e.message||e);dlog("TEST ERROR "+(e.message||e))}
+  };
+  $("model").oninput=renderModels;
+  $("model").onfocus=function(){this.select()};
+  $("free").onchange=renderModels;
+  $("refM").onclick=fetchModels;
+  $("theme").onchange=function(){S.theme=this.value;theme();save()};
+  $("saveBtn").onclick=function(){
+    S.key=$("key").value.trim();S.tkey=$("tkey").value.trim();S.model=$("model").value.trim()||S.model;S.sys=$("sys").value.trim();
+    S.freeOnly=$("free").checked;save();chip();$("dlg").close();
+  };
+  $("cmDel").onclick=function(){
+    var c=cmChat();$("cm").hidden=true;if(!c)return;
+    if(c.id===S.cur&&ctrl){alert("Wait for the reply to finish first.");return}
+    if(!confirm('Delete "'+c.title+'"?'))return;
+    S.chats=S.chats.filter(function(x){return x.id!==c.id});
+    if(S.cur===c.id){S.cur=S.chats.length?S.chats[0].id:null;render()}
+    save();renderChats();
+  };
+  $("cmRen").onclick=function(){
+    var c=cmChat();$("cm").hidden=true;if(!c)return;
+    var n=prompt("Rename chat",c.title);
+    if(n&&n.trim()){c.title=n.trim().slice(0,60);save();renderChats()}
+  };
+  document.addEventListener("click",function(e){
+    if(!e.target.closest("#cm"))$("cm").hidden=true;
+  });
+
+  (async function init(){
+    DB=await idbOpen();
+    var d=await idbGet("aiw");
+    if(!d){try{d=JSON.parse(localStorage.getItem("aiw")||"null")}catch(e){}}
+    if(d)for(var k in d)S[k]=d[k];
+    if(!chat()&&S.chats.length)S.cur=S.chats[0].id;
+    theme();applyMode();tog();render();save();
+  })();
+})();
+</script>
+</body>
+</html>
